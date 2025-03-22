@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.medishare"
-    compileSdk = 35
+    compileSdk = 30
 
     defaultConfig {
         applicationId = "com.example.medishare"
@@ -40,7 +40,15 @@ android {
 }
 
 dependencies {
-
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.google.firebase:firebase-auth:21.0.1")
+    implementation("com.google.firebase:firebase-storage")
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.firebaseui:firebase-ui-storage:8.0.2")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity:17.1.1")
+    implementation(libs.firebase.functions.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

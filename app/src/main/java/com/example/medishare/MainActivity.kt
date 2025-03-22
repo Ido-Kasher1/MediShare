@@ -1,6 +1,7 @@
 package com.example.medishare
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +17,18 @@ import com.example.medishare.ui.theme.MediShareTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+            FirebaseApp.initializeApp(this)?.let {
+                val options = it.options
+                Log.d("FIREBASE", "Project ID: ${options.projectId}")
+                Log.d("FIREBASE", "App ID: ${options.applicationId}")
+                Log.d("FIREBASE", "API Key: ${options.apiKey}")
+            }
+
+            val firebaseAppCheck = FirebaseAppCheck.getInstance()
+            firebaseAppCheck.installAppCheckProviderFactory(
+                PlayIntegrityAppCheckProviderFactory.getInstance()
+            )
         enableEdgeToEdge()
         setContent {
             MediShareTheme {
