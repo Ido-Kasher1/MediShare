@@ -106,13 +106,23 @@ class PostRepository(private val context: Context) {
     }
 
     suspend fun uploadImage(imageBytes: ByteArray): String {
-        val imageRef = storage.reference.child("post_images/${UUID.randomUUID()}.jpg")
+        // Extract file extension from bytes using magic numbers or default to bin
+        val fileExtension = when {
+            imageBytes.size >= 2 && imageBytes[0] == 0xFF.toByte() && imageBytes[1] == 0xD8.toByte() -> "jpg"
+            imageBytes.size >= 4 && imageBytes[0] == 0x89.toByte() && imageBytes[1] == 0x50.toByte() -> "png"
+            imageBytes.size >= 4 && imageBytes[0] == 0x47.toByte() && imageBytes[1] == 0x49.toByte() -> "gif"
+            imageBytes.size >= 4 && imageBytes[0] == 0x25.toByte() && imageBytes[1] == 0x50.toByte() -> "pdf"
+            imageBytes.size >= 4 && imageBytes.slice(0..3).toByteArray().contentEquals("PK\u0003\u0004".toByteArray()) -> "zip"
+            else -> "bin"
+        }
+        
+        val fileRef = storage.reference.child("post_files/${UUID.randomUUID()}.$fileExtension")
         return try {
-            imageRef.putBytes(imageBytes).await()
-            val downloadUrl = imageRef.downloadUrl.await()
+            fileRef.putBytes(imageBytes).await()
+            val downloadUrl = fileRef.downloadUrl.await()
             downloadUrl.toString()
         } catch (e: Exception) {
-            Log.e(TAG, "Error uploading image", e)
+            Log.e(TAG, "Error uploading file", e)
             throw e
         }
     }

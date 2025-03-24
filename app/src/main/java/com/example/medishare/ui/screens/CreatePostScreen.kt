@@ -6,17 +6,22 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.medishare.ui.viewmodels.PostViewModel
 import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
@@ -38,7 +43,7 @@ fun CreatePostScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isCreatingPost by remember { mutableStateOf(false) }
 
-    val imagePicker = rememberLauncherForActivityResult(
+    val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
@@ -91,17 +96,30 @@ fun CreatePostScreen(
                 minLines = 3
             )
 
-            Button(
-                onClick = { imagePicker.launch("image/*") },
-                modifier = Modifier.fillMaxWidth()
+            OutlinedButton(
+                onClick = { filePicker.launch("*/*") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
             ) {
-                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (selectedImageUri != null) "Change Image" else "Add Image")
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "Attach file",
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(if (selectedImageUri != null) "Change File" else "Add File")
             }
 
             selectedImageUri?.let {
-                Text("Image selected", style = MaterialTheme.typography.bodyMedium)
+                AsyncImage(
+                    model = it,
+                    contentDescription = "Selected file preview",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Inside
+                )
             }
 
             if (refreshState is PostsState.Error) {
