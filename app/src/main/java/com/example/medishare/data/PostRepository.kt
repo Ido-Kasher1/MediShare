@@ -134,10 +134,9 @@ class PostRepository(private val context: Context) {
                 "title" to post.title,
                 "description" to post.description,
                 "imageUrl" to post.imageUrl,
-                "timestamp" to com.google.firebase.Timestamp.now()
             )
             firestore.collection("posts").document(post.id)
-                .set(postData)
+                .update(postData as Map<String, Any>)
                 .await()
             
             // Update local cache
@@ -152,13 +151,26 @@ class PostRepository(private val context: Context) {
 
     suspend fun deletePost(postId: String) {
         try {
-            firestore.collection("posts").document(postId)
-                .delete()
-                .await()
+            // Get post before deletion to get the file URL
+            val post = firestore.collection("posts").document(postId).get().await()
+            val imageUrl = post.getString("imageUrl")
+            
+            // Delete from Firestore
+            firestore.collection("posts").document(postId).delete().await()
+            
+            // Delete file from storage if exists
+            imageUrl?.let { url ->
+                try {
+                    val fileRef = storage.getReferenceFromUrl(url)
+                    fileRef.delete().await()
+                    Log.d(TAG, "Successfully deleted file from storage")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting file from storage", e)
+                }
+            }
             
             // Delete from local cache
             postDao.deletePost(postId)
-            
             Log.d(TAG, "Successfully deleted post from Firestore and local cache")
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting post", e)

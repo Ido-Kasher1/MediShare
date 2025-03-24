@@ -1,19 +1,25 @@
 package com.example.medishare.ui.screens
 
-import android.util.Log
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.LazyPagingItems
+import coil.compose.AsyncImage
 import com.example.medishare.data.local.PostEntity
 import com.example.medishare.models.Post
 import com.example.medishare.ui.viewmodels.AuthViewModel
@@ -41,6 +47,7 @@ fun ProfileScreen(
     val isRefreshing = refreshState is PostsState.Loading
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
+    var editingPost by remember { mutableStateOf<Post?>(null) }
 
     val userPosts = currentUser?.uid?.let { uid ->
         postViewModel.getUserPosts(uid).collectAsLazyPagingItems()
@@ -57,61 +64,35 @@ fun ProfileScreen(
                 },
                 actions = {
                     IconButton(onClick = { authViewModel.signOut() }) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Sign out")
                     }
                 }
             )
-        },
-        modifier = modifier
+        }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // User Info Section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = "Email: ${currentUser?.email ?: "Not available"}",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-
-            // Posts Section
+        Box(modifier = modifier.padding(padding)) {
             SwipeRefresh(
                 state = swipeRefreshState,
                 onRefresh = { postViewModel.refreshPosts() }
             ) {
-                when (refreshState) {
-                    is PostsState.Error -> {
-                        val error = (refreshState as PostsState.Error).message
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                    else -> {
-                        userPosts?.let { posts ->
-                            UserPostsList(
-                                posts = posts,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            )
-                        }
-                    }
+                if (userPosts != null) {
+                    UserPostsList(
+                        posts = userPosts,
+                        onEditPost = { post -> editingPost = post },
+                        onDeletePost = { postId -> postViewModel.deletePost(postId) }
+                    )
                 }
+            }
+
+            editingPost?.let { post ->
+                EditPostDialog(
+                    post = post,
+                    onDismiss = { editingPost = null },
+                    onConfirm = { updatedPost ->
+                        postViewModel.updatePost(updatedPost)
+                        editingPost = null
+                    }
+                )
             }
         }
     }
@@ -120,41 +101,151 @@ fun ProfileScreen(
 @Composable
 fun UserPostsList(
     posts: LazyPagingItems<PostEntity>,
+    onEditPost: (Post) -> Unit,
+    onDeletePost: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(count = posts.itemCount, key = { index -> posts[index]?.id ?: index }) { index ->
-            val post = posts[index]
-            post?.let {
-                UserPostCard(post = it)
+    LazyColumn(modifier = modifier) {
+        items(
+            count = posts.itemCount,
+            key = { index -> posts[index]?.id ?: index }
+        ) { index ->
+            posts[index]?.let { post ->
+                UserPostCard(
+                    post = post,
+                    onEditClick = onEditPost,
+                    onDeleteClick = onDeletePost
+                )
             }
         }
     }
 }
 
 @Composable
-private fun UserPostCard(post: PostEntity) {
+private fun UserPostCard(
+    post: PostEntity,
+    onEditClick: (Post) -> Unit,
+    onDeleteClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = post.title,
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = post.title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                onEditClick(post.toPost())
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                onDeleteClick(post.id)
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Delete, contentDescription = null)
+                            }
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = post.description,
                 style = MaterialTheme.typography.bodyMedium
             )
+            post.imageUrl?.let { url ->
+                Spacer(modifier = Modifier.height(8.dp))
+                AsyncImage(
+                    model = url,
+                    contentDescription = "Post attachment",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Inside
+                )
+            }
         }
     }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditPostDialog(
+    post: Post,
+    onDismiss: () -> Unit,
+    onConfirm: (Post) -> Unit
+) {
+    var title by remember { mutableStateOf(post.title) }
+    var description by remember { mutableStateOf(post.description) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Post") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(post.copy(title = title, description = description))
+                    onDismiss()
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
