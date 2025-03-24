@@ -1,65 +1,60 @@
-package com.example.pixelpeppers
+package com.example.medishare
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.pixelpeppers.ui.screens.LoginScreen
+import com.example.medishare.ui.screens.HomeScreen
+import com.example.medishare.ui.screens.LoginScreen
+import com.example.medishare.ui.screens.ProfileScreen
+import com.example.medishare.ui.screens.CreatePostScreen
+
+sealed class Route(val route: String) {
+    object Login : Route("login")
+    object Home : Route("home")
+    object Profile : Route("profile")
+    object CreatePost : Route("create_post")
+}
 
 @Composable
 fun NavGraph(
-    startDestination: String,
+    startDestination: String = Route.Login.route,
+    navController: NavHostController = rememberNavController()
 ) {
-    val navController = rememberNavController()
-    val navigateGame: (Game) -> Unit =
-        { game: Game -> navController.navigate(route = "${Route.Game.route}/${game.id}") }
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(
-            route = Route.OnboardingIntro.route
-        ) {
-            Onboarding(navigateToMenu = {navController.navigate(route = Route.Menu.route)})
-        }
-        composable(
-            route = Route.Menu.route
-        ) {
-            MainMenu(
-                onGameClick = navigateGame,
-                onSearchClick = { navController.navigate(route = Route.Search.route) },
-                onAccountClick = { navController.navigate(route = Route.Account.route) },
-                returnToOnboarding= { navController.navigate(route=Route.OnboardingIntro.route)}
-            )
-        }
-        composable(
-            route = Route.Login.route
-        ) {
-            Login()
-        }
-        composable(
-            route = Route.Search.route
-        ) {
-            Search(onGameClick = navigateGame)
-        }
-        composable(route = Route.LoginEmailPassword.route) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable(Route.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Route.Menu.route) {
-                        popUpTo(Route.LoginEmailPassword.route) { inclusive = true }
+                    navController.navigate(Route.Home.route) {
+                        popUpTo(Route.Login.route) { inclusive = true }
                     }
                 }
             )
         }
-        composable(
-            route = "${Route.Game.route}/{gameID}"
-        ) {
-            GamePage(
-                gameID = it.arguments?.getString("gameID")?.toInt() ?: 17000,
+        
+        composable(Route.Home.route) {
+            HomeScreen(
+                onCreatePost = { navController.navigate(Route.CreatePost.route) },
+                onProfileClick = { navController.navigate(Route.Profile.route) }
             )
         }
-        composable(
-            route = Route.Account.route
-        ) {
-            AccountScreen(
-                routeToLogin = {navController.navigate(route = Route.Login.route)},
+        
+        composable(Route.Profile.route) {
+            ProfileScreen(
+                onBackClick = { navController.navigateUp() }
+            )
+        }
+        
+        composable(Route.CreatePost.route) {
+            CreatePostScreen(
+                onPostCreated = {
+                    navController.navigateUp()
+                },
+                onBackClick = { navController.navigateUp() }
             )
         }
     }

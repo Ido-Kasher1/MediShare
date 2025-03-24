@@ -1,6 +1,7 @@
 package com.example.medishare.ui.screens
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medishare.ui.viewmodels.PostViewModel
+import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,25 +26,32 @@ import com.example.medishare.ui.viewmodels.PostsState
 fun CreatePostScreen(
     onPostCreated: () -> Unit,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: PostViewModel = viewModel()
+    modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val viewModel: PostViewModel = viewModel(
+        factory = PostViewModelFactory(context)
+    )
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var isCreatingPost by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
     }
 
-    val postsState by viewModel.postsState.collectAsState()
+    val refreshState by viewModel.refreshState.collectAsState()
 
-    LaunchedEffect(postsState) {
-        if (postsState is PostsState.Success) {
-            onPostCreated()
+    LaunchedEffect(refreshState) {
+        if (isCreatingPost && refreshState !is PostsState.Loading) {
+            isCreatingPost = false
+            if (refreshState !is PostsState.Error) {
+                onPostCreated()
+            }
         }
     }
 
@@ -71,8 +80,7 @@ fun CreatePostScreen(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
@@ -87,24 +95,18 @@ fun CreatePostScreen(
                 onClick = { imagePicker.launch("image/*") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = "Add Image"
-                )
+                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(if (selectedImageUri != null) "Change Image" else "Add Image")
             }
 
             selectedImageUri?.let {
-                Text(
-                    text = "Image selected: ${it.lastPathSegment}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text("Image selected", style = MaterialTheme.typography.bodyMedium)
             }
 
-            if (postsState is PostsState.Error) {
+            if (refreshState is PostsState.Error) {
                 Text(
-                    text = (postsState as PostsState.Error).message,
+                    text = (refreshState as PostsState.Error).message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -112,23 +114,19 @@ fun CreatePostScreen(
 
             Button(
                 onClick = {
-                    viewModel.createPost(
-                        title = title,
-                        description = description,
-                        imageUri = selectedImageUri
-                    )
+                    isCreatingPost = true
+                    viewModel.createPost(title, description, selectedImageUri)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank() && description.isNotBlank() && postsState !is PostsState.Loading
+                enabled = title.isNotBlank() && description.isNotBlank() && !isCreatingPost,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (postsState is PostsState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Create Post")
-                }
+                Text("Create Post")
+            }
+
+            if (isCreatingPost) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }

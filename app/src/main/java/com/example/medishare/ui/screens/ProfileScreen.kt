@@ -1,20 +1,27 @@
 package com.example.medishare.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.LazyPagingItems
+import com.example.medishare.data.local.PostEntity
 import com.example.medishare.models.Post
 import com.example.medishare.ui.viewmodels.AuthViewModel
 import com.example.medishare.ui.viewmodels.PostViewModel
+import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,16 +29,21 @@ import com.google.firebase.auth.FirebaseAuth
 fun ProfileScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    authViewModel: AuthViewModel = viewModel(),
-    postViewModel: PostViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel()
 ) {
-    val userPostsState by postViewModel.userPostsState.collectAsState()
-    val currentUser = FirebaseAuth.getInstance().currentUser
+    val context = LocalContext.current
+    val postViewModel: PostViewModel = viewModel(
+        factory = PostViewModelFactory(context)
+    )
 
-    LaunchedEffect(currentUser?.uid) {
-        currentUser?.uid?.let { userId ->
-            postViewModel.loadUserPosts(userId)
-        }
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val refreshState by postViewModel.refreshState.collectAsState()
+    val isRefreshing = refreshState is PostsState.Loading
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+
+
+    val userPosts = currentUser?.uid?.let { uid ->
+        postViewModel.getUserPosts(uid).collectAsLazyPagingItems()
     }
 
     Scaffold(
@@ -69,62 +81,35 @@ fun ProfileScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = currentUser?.email ?: "No email",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Member since: ${currentUser?.metadata?.creationTimestamp?.let { 
-                            java.text.SimpleDateFormat("MMM dd, yyyy").format(it)
-                        } ?: "Unknown"}",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Email: ${currentUser?.email ?: "Not available"}",
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
 
-            // My Posts Section
-            Text(
-                text = "My Posts",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            when (val state = userPostsState) {
-                is PostsState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        CircularProgressIndicator()
+            // Posts Section
+            SwipeRefresh(
+                state = swipeRefreshState,
+                onRefresh = { postViewModel.refreshPosts() }
+            ) {
+                when (refreshState) {
+                    is PostsState.Error -> {
+                        val error = (refreshState as PostsState.Error).message
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
-                }
-                is PostsState.Success -> {
-                    if (state.posts.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Text(
-                                text = "You haven't created any posts yet",
-                                style = MaterialTheme.typography.bodyMedium
+                    else -> {
+                        userPosts?.let { posts ->
+                            UserPostsList(
+                                posts = posts,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
                             )
                         }
-                    } else {
-                        UserPostsList(posts = state.posts)
-                    }
-                }
-                is PostsState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error
-                        )
                     }
                 }
             }
@@ -133,8 +118,8 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun UserPostsList(
-    posts: List<Post>,
+fun UserPostsList(
+    posts: LazyPagingItems<PostEntity>,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -142,26 +127,34 @@ private fun UserPostsList(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(posts) { post ->
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = post.title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = post.description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+        items(count = posts.itemCount, key = { index -> posts[index]?.id ?: index }) { index ->
+            val post = posts[index]
+            post?.let {
+                UserPostCard(post = it)
             }
+        }
+    }
+}
+
+@Composable
+private fun UserPostCard(post: PostEntity) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = post.title,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = post.description,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
