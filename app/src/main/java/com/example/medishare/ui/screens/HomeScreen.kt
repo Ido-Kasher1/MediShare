@@ -1,10 +1,14 @@
 package com.example.medishare.ui.screens
-
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -62,8 +66,11 @@ fun HomeScreen(
     ) { padding ->
         SwipeRefresh(
             state = swipeRefreshState,
-            onRefresh = { viewModel.refreshPosts() }
-        ) {
+            onRefresh = { viewModel.refreshPosts() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ){
             when (refreshState) {
                 is PostsState.Error -> {
                     val error = (refreshState as PostsState.Error).message
@@ -76,15 +83,65 @@ fun HomeScreen(
                 else -> {
                     PostList(
                         posts = posts,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
     }
 }
+
+@Composable
+fun FilePreview(fileUrl: String) {
+    val context = LocalContext.current
+
+    Log.d("FilePreview", "File URL: $fileUrl")
+    when {
+        fileUrl.endsWith(".jpg", true) || fileUrl.endsWith(".jpeg", true) || fileUrl.endsWith(".png", true) -> {
+            AsyncImage(
+                model = fileUrl,
+                contentDescription = "Image preview",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
+        fileUrl.endsWith(".pdf", true) -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(Icons.Default.Description, contentDescription = "PDF file")
+                Text("PDF File", style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(Uri.parse(fileUrl), "application/pdf")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("Open")
+                }
+            }
+        }
+        else -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Icon(Icons.Default.AttachFile, contentDescription = "File")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("File attached", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
 
 @Composable
 fun PostList(
@@ -117,17 +174,10 @@ private fun PostCard(post: PostEntity) {
                 text = post.title,
                 style = MaterialTheme.typography.titleLarge
             )
-            post.imageUrl?.let { url ->
+            if (!post.imageUrl.isNullOrBlank())
+            {
                 Spacer(modifier = Modifier.height(8.dp))
-                AsyncImage(
-                    model = url,
-                    contentDescription = "Post attachment",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Inside
-                )
+                FilePreview(fileUrl = post.imageUrl)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
