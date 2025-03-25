@@ -67,16 +67,54 @@ class PostRepository(private val context: Context) {
         }
     }
 
-    suspend fun createPost(title: String, description: String, imageUrl: String?, location: GeoPoint? = null): Post {
+    suspend fun uploadImage(imageBytes: ByteArray): String {
+        // Extract file extension from bytes using magic numbers or default to bin
+        val fileExtension = when {
+            imageBytes.size >= 2 && imageBytes[0] == 0xFF.toByte() && imageBytes[1] == 0xD8.toByte() -> "jpg"
+            imageBytes.size >= 4 && imageBytes[0] == 0x89.toByte() && imageBytes[1] == 0x50.toByte() -> "png"
+            imageBytes.size >= 4 && imageBytes[0] == 0x47.toByte() && imageBytes[1] == 0x49.toByte() -> "gif"
+            imageBytes.size >= 4 && imageBytes[0] == 0x25.toByte() && imageBytes[1] == 0x50.toByte() -> "pdf"
+            imageBytes.size >= 4 && imageBytes.slice(0..3).toByteArray().contentEquals("PK\u0003\u0004".toByteArray()) -> "zip"
+            else -> "bin"
+        }
+        
+        val fileName = "${UUID.randomUUID()}.$fileExtension"
+        val storageRef = storage.reference.child("images/$fileName")
+
+        return try {
+            storageRef.putBytes(imageBytes).await()
+            val downloadUrl = storageRef.downloadUrl.await()
+            downloadUrl.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading image", e)
+            throw e
+        }
+    }
+
+    suspend fun createPost(
+        title: String, 
+        description: String, 
+        imageUrl: String?, 
+        fileName: String? = null,
+        location: GeoPoint? = null
+    ): Post {
         Log.d(TAG, "Starting post creation in Firestore")
         val currentUser = auth.currentUser ?: throw IllegalStateException("User not logged in")
         val postId = UUID.randomUUID().toString()
+        
+        // Get the actual file name from the URL if it exists
+        val actualFileName = if (imageUrl != null) {
+            imageUrl.substringAfterLast("/").substringBefore("?")
+        } else {
+            fileName ?: ""
+        }
         
         val postData = hashMapOf(
             "userId" to currentUser.uid,
             "title" to title,
             "description" to description,
             "imageUrl" to (imageUrl ?: ""),
+            "fileName" to actualFileName,
             "timestamp" to com.google.firebase.Timestamp.now(),
             "location" to location
         )
@@ -91,38 +129,16 @@ class PostRepository(private val context: Context) {
                 userId = currentUser.uid,
                 title = title,
                 description = description,
-                imageUrl = imageUrl ?: ""
+                imageUrl = imageUrl ?: "",
+                fileName = actualFileName
             )
 
-            // Cache the new post locally
             postDao.insertPosts(listOf(PostEntity.fromPost(post)))
             
             Log.d(TAG, "Successfully created post in Firestore and local cache")
             post
         } catch (e: Exception) {
             Log.e(TAG, "Error creating post", e)
-            throw e
-        }
-    }
-
-    suspend fun uploadImage(imageBytes: ByteArray): String {
-        // Extract file extension from bytes using magic numbers or default to bin
-        val fileExtension = when {
-            imageBytes.size >= 2 && imageBytes[0] == 0xFF.toByte() && imageBytes[1] == 0xD8.toByte() -> "jpg"
-            imageBytes.size >= 4 && imageBytes[0] == 0x89.toByte() && imageBytes[1] == 0x50.toByte() -> "png"
-            imageBytes.size >= 4 && imageBytes[0] == 0x47.toByte() && imageBytes[1] == 0x49.toByte() -> "gif"
-            imageBytes.size >= 4 && imageBytes[0] == 0x25.toByte() && imageBytes[1] == 0x50.toByte() -> "pdf"
-            imageBytes.size >= 4 && imageBytes.slice(0..3).toByteArray().contentEquals("PK\u0003\u0004".toByteArray()) -> "zip"
-            else -> "bin"
-        }
-        
-        val fileRef = storage.reference.child("post_files/${UUID.randomUUID()}.$fileExtension")
-        return try {
-            fileRef.putBytes(imageBytes).await()
-            val downloadUrl = fileRef.downloadUrl.await()
-            downloadUrl.toString()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error uploading file", e)
             throw e
         }
     }

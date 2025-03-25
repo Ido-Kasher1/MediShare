@@ -92,12 +92,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun FilePreview(fileUrl: String) {
+fun FilePreview(fileUrl: String, fileName: String) {
     val context = LocalContext.current
 
-    Log.d("FilePreview", "File URL: $fileUrl")
+    Log.d("FilePreview", "File URL: $fileName")
     when {
-        fileUrl.endsWith(".jpg", true) || fileUrl.endsWith(".jpeg", true) || fileUrl.endsWith(".png", true) -> {
+        fileName.endsWith(".jpg", true) || fileName.endsWith(".jpeg", true) || fileName.endsWith(".png", true) -> {
             AsyncImage(
                 model = fileUrl,
                 contentDescription = "Image preview",
@@ -108,7 +108,7 @@ fun FilePreview(fileUrl: String) {
                 contentScale = ContentScale.Crop
             )
         }
-        fileUrl.endsWith(".pdf", true) -> {
+        fileName.endsWith(".pdf", true) -> {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +177,7 @@ private fun PostCard(post: PostEntity) {
             if (!post.imageUrl.isNullOrBlank())
             {
                 Spacer(modifier = Modifier.height(8.dp))
-                FilePreview(fileUrl = post.imageUrl)
+                FilePreview(fileUrl = post.imageUrl, fileName = post.fileName ?: "")
             }
 
             Spacer(modifier = Modifier.height(8.dp))

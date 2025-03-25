@@ -41,12 +41,14 @@ fun CreatePostScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedFileName by remember { mutableStateOf<String?>(null) }
     var isCreatingPost by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
+        selectedFileName = uri?.lastPathSegment?.substringAfterLast('/')
     }
 
     val refreshState by viewModel.refreshState.collectAsState()
@@ -111,15 +113,24 @@ fun CreatePostScreen(
             }
 
             selectedImageUri?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = "Selected file preview",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Inside
-                )
+                Column {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = "Selected file preview",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Inside
+                    )
+                    selectedFileName?.let { fileName ->
+                        Text(
+                            text = "Selected file: $fileName",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
             }
 
             if (refreshState is PostsState.Error) {

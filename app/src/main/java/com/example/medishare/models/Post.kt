@@ -22,6 +22,9 @@ data class Post(
     
     @PropertyName("imageUrl")
     val imageUrl: String = "",
+
+    @PropertyName("fileName")
+    val fileName: String = "",
     
     @ServerTimestamp
     @PropertyName("timestamp")

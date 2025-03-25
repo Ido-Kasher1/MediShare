@@ -13,6 +13,7 @@ data class PostEntity(
     val title: String,
     val description: String,
     val imageUrl: String,
+    val fileName: String? = null,
     val timestamp: Date,
     val latitude: Double?,
     val longitude: Double?
@@ -23,7 +24,8 @@ data class PostEntity(
         title = title,
         description = description,
         imageUrl = imageUrl,
-        timestamp = timestamp
+        timestamp = timestamp,
+        fileName = fileName?: "",
     )
 
     companion object {
@@ -33,6 +35,7 @@ data class PostEntity(
             title = post.title,
             description = post.description,
             imageUrl = post.imageUrl,
+            fileName = post.fileName,
             timestamp = post.timestamp,
             latitude = null,  // TODO: Add location support
             longitude = null

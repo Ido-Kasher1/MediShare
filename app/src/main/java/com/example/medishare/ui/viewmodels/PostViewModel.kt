@@ -57,11 +57,12 @@ class PostViewModel(context: Context) : ViewModel() {
     fun createPost(title: String, description: String, imageUri: Uri?, location: GeoPoint? = null) {
         viewModelScope.launch {
             try {
+                val fileName = imageUri?.lastPathSegment?.substringAfterLast('/')
                 val imageUrl = imageUri?.let { uri ->
                     val imageBytes = compressImage(uri)
                     repository.uploadImage(imageBytes)
                 }
-                repository.createPost(title, description, imageUrl, location)
+                repository.createPost(title, description, imageUrl, fileName, location)
                 refreshPosts() // Refresh the posts after creating a new one
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating post", e)
