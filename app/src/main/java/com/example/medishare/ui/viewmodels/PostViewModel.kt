@@ -82,7 +82,7 @@ class PostViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             try {
                 repository.updatePost(post)
-                refreshPosts() // Reload posts after update
+                refreshPosts()
             } catch (e: Exception) {
                 _refreshState.value = PostsState.Error(e.message ?: "Failed to update post")
             }
@@ -93,7 +93,7 @@ class PostViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             try {
                 repository.deletePost(postId)
-                refreshPosts() // Reload posts after deletion
+                refreshPosts()
             } catch (e: Exception) {
                 _refreshState.value = PostsState.Error(e.message ?: "Failed to delete post")
             }
