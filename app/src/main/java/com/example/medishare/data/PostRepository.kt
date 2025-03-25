@@ -51,7 +51,7 @@ class PostRepository(private val context: Context) {
         }.flow
     }
 
-    suspend fun refreshPosts() {
+    suspend fun refreshPosts(){
         try {
             val snapshot = firestore.collection("posts")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -60,7 +60,7 @@ class PostRepository(private val context: Context) {
             
             val posts = snapshot.documents.mapNotNull { it.toObject(Post::class.java) }
             val entities = posts.map { PostEntity.fromPost(it) }
-            postDao.refreshPosts(entities)
+            postDao.insertPosts(entities)
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing posts", e)
             throw e
