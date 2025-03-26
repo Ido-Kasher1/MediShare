@@ -3,6 +3,7 @@ package com.example.medishare.ui.screens
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -22,11 +24,13 @@ import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.example.medishare.data.local.PostEntity
 import com.example.medishare.models.Post
+import com.example.medishare.ui.components.EditProfileDialog
 import com.example.medishare.ui.components.FilePreview
 import com.example.medishare.ui.viewmodels.AuthViewModel
 import com.example.medishare.ui.viewmodels.PostViewModel
 import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
+import com.example.medishare.utils.compressImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.google.firebase.auth.FirebaseAuth
@@ -39,9 +43,7 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val postViewModel: PostViewModel = viewModel(
-        factory = PostViewModelFactory(context)
-    )
+    val postViewModel: PostViewModel = viewModel(factory = PostViewModelFactory(context))
 
     val currentUser = FirebaseAuth.getInstance().currentUser
     val refreshState by postViewModel.refreshState.collectAsState()
@@ -49,9 +51,15 @@ fun ProfileScreen(
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
     var editingPost by remember { mutableStateOf<Post?>(null) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
 
+    val userProfile by authViewModel.userProfile
     val userPosts = currentUser?.uid?.let { uid ->
         postViewModel.getUserPosts(uid).collectAsLazyPagingItems()
+    }
+
+    LaunchedEffect(Unit) {
+        authViewModel.loadUserProfile()
     }
 
     Scaffold(
@@ -74,12 +82,48 @@ fun ProfileScreen(
         Box(modifier = modifier.padding(padding)) {
             SwipeRefresh(
                 state = swipeRefreshState,
-                onRefresh = { postViewModel.refreshPosts() }
+                onRefresh = {
+                    postViewModel.refreshPosts()
+                    authViewModel.loadUserProfile()
+                }
             ) {
-                if (userPosts != null) {
-                    var searchQuery by remember { mutableStateOf("") }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (userProfile != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            userProfile!!.profileImageUrl.takeIf { it.isNotBlank() }?.let { imageUrl ->
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Profile Image",
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
 
-                    Column(modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                text = userProfile!!.displayName,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = userProfile!!.email,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { showEditProfileDialog = true }) {
+                                Text("ערוך פרופיל")
+                            }
+                        }
+                    }
+
+                    if (userPosts != null) {
+                        var searchQuery by remember { mutableStateOf("") }
+
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
@@ -88,6 +132,7 @@ fun ProfileScreen(
                                 .fillMaxWidth()
                                 .padding(16.dp)
                         )
+
                         UserPostsList(
                             posts = userPosts,
                             onEditPost = { post -> editingPost = post },
@@ -108,9 +153,22 @@ fun ProfileScreen(
                     }
                 )
             }
+
+            if (showEditProfileDialog && userProfile != null) {
+                EditProfileDialog(
+                    currentName = userProfile!!.displayName,
+                    onDismiss = { showEditProfileDialog = false },
+                    onSave = { newName, imageUri ->
+                        val bytes = imageUri?.let { compressImage(context, it) }
+                        authViewModel.updateProfile(newName, bytes)
+                        showEditProfileDialog = false
+                    }
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun UserPostsList(

@@ -2,7 +2,7 @@ package com.example.medishare.ui.viewmodels
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import com.example.medishare.utils.compressImage
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -80,7 +80,7 @@ class PostViewModel(context: Context) : ViewModel() {
                                 fileName?.lowercase()?.endsWith(".jpeg") == true ||
                                 fileName?.lowercase()?.endsWith(".png") == true
 
-                        val finalBytes: ByteArray = (if (isImage) compressImage(uri) else bytes) as ByteArray
+                        val finalBytes: ByteArray = (if (isImage) compressImage(postContext, uri) else bytes) as ByteArray
 
                         imageUrl = repository.uploadFile(finalBytes)
                     }
@@ -104,13 +104,7 @@ class PostViewModel(context: Context) : ViewModel() {
     }
 
 
-    private fun compressImage(uri: Uri): ByteArray {
-        val inputStream = postContext.contentResolver.openInputStream(uri)
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-        return outputStream.toByteArray()
-    }
+
 
     fun updatePost(post: Post) {
         viewModelScope.launch {

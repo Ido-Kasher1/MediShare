@@ -1,9 +1,11 @@
 package com.example.medishare.ui.viewmodels
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medishare.data.AuthRepository
-import com.google.firebase.firestore.auth.User
+import com.example.medishare.models.UserProfile
+import androidx.compose.runtime.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,6 +16,8 @@ class AuthViewModel : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Initial)
     val authState: StateFlow<AuthState> = _authState
+    private val _userProfile = mutableStateOf<UserProfile?>(null)
+    val userProfile: State<UserProfile?> = _userProfile
 
     init {
         checkAuthState()
@@ -51,11 +55,11 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, displayName: String, profileImageBytes: ByteArray?) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             try {
-                val result = repository.signUp(email, password)
+                val result = repository.signUp(email, password, displayName, profileImageBytes)
                 result.onSuccess { user ->
                     if (user != null) {
                         _authState.value = AuthState.Authenticated(email)
@@ -78,6 +82,20 @@ class AuthViewModel : ViewModel() {
     fun signOut() {
         repository.signOut()
         _authState.value = AuthState.Unauthenticated
+    }
+    fun loadUserProfile() {
+        val uid = repository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _userProfile.value = repository.getUserProfile(uid)
+        }
+    }
+
+    fun updateProfile(displayName: String, imageBytes: ByteArray?) {
+        val uid = repository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val success = repository.updateUserProfile(uid, displayName, imageBytes)
+            if (success) loadUserProfile()
+        }
     }
 }
 
