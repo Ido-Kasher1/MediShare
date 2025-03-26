@@ -1,4 +1,6 @@
 package com.example.medishare.ui.screens
+import ClickablePostText
+import android.util.Log
 import com.example.medishare.ui.components.FilePreview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,11 +16,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.LazyPagingItems
 import com.example.medishare.data.local.PostEntity
+import com.example.medishare.ui.components.WordExplanationDialog
 import com.example.medishare.ui.viewmodels.PostViewModel
 import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.example.medishare.utils.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +38,7 @@ fun HomeScreen(
     val viewModel: PostViewModel = viewModel(
         factory = PostViewModelFactory(context)
     )
-
+    val TAG = "HomeScreen"
     val refreshState by viewModel.refreshState.collectAsState()
     val posts = viewModel.posts.collectAsLazyPagingItems()
     val isRefreshing = refreshState is PostsState.Loading
@@ -72,10 +79,26 @@ fun HomeScreen(
                     )
                 }
                 else -> {
-                    PostList(
-                        posts = posts,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    var searchQuery by remember { mutableStateOf("") }
+
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            label = { Text("Search posts...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        )
+
+                        PostList(
+                            posts = posts,
+                            searchQuery = searchQuery,
+                            modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                        )
+                    }
                 }
             }
         }
@@ -84,14 +107,22 @@ fun HomeScreen(
 @Composable
 fun PostList(
     posts: LazyPagingItems<PostEntity>,
+    searchQuery: String,
     modifier: Modifier = Modifier
 ) {
+    val filteredPosts = remember(posts.itemSnapshotList.items, searchQuery) {
+        posts.itemSnapshotList.items.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.description.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) { items(count = posts.itemCount, key = { index -> posts[index]?.id ?: index }) { index ->
-        val post = posts[index]
+    ) { items(count = filteredPosts.size, key = { index -> filteredPosts[index]?.id ?: index }) { index ->
+        val post = filteredPosts[index]
         post?.let {
             PostCard(post = it)
         }
@@ -99,9 +130,15 @@ fun PostList(
     }
 }
 @Composable
-private fun PostCard(post: PostEntity) {
+fun PostCard(post: PostEntity) {
+    var selectedWord by remember { mutableStateOf<String?>(null) }
+    var explanation by remember { mutableStateOf<String?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -112,17 +149,43 @@ private fun PostCard(post: PostEntity) {
                 text = post.title,
                 style = MaterialTheme.typography.titleLarge
             )
-            if (!post.imageUrl.isNullOrBlank())
-            {
+
+            if (!post.imageUrl.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                FilePreview(fileUrl = post.imageUrl, fileName = post.fileName ?: "")
+                FilePreview(
+                    fileUrl = post.imageUrl,
+                    fileName = post.fileName ?: ""
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = post.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            ClickablePostText(post.description) { word ->
+                selectedWord = word
+                explanation = "טוען הסבר..."
+                showDialog = true
+            }
         }
     }
+
+    LaunchedEffect(selectedWord) {
+        selectedWord?.let { word ->
+            withContext(Dispatchers.IO) {
+                Log.d("HomeScreen", "Searching for explanation of $word")
+                val result = fetchWikiSummary(word)
+                withContext(Dispatchers.Main) {
+                    explanation = result
+                }
+            }
+        }
+    }
+
+    if (showDialog && explanation != null && selectedWord != null) {
+        WordExplanationDialog(
+            word = selectedWord!!,
+            explanation = explanation!!,
+            onDismiss = { showDialog = false }
+        )
+    }
 }
+
+

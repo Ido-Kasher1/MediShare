@@ -77,11 +77,24 @@ fun ProfileScreen(
                 onRefresh = { postViewModel.refreshPosts() }
             ) {
                 if (userPosts != null) {
-                    UserPostsList(
-                        posts = userPosts,
-                        onEditPost = { post -> editingPost = post },
-                        onDeletePost = { post -> postViewModel.deletePost(post) }
-                    )
+                    var searchQuery by remember { mutableStateOf("") }
+
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            label = { Text("Search posts...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        )
+                        UserPostsList(
+                            posts = userPosts,
+                            onEditPost = { post -> editingPost = post },
+                            searchQuery = searchQuery,
+                            onDeletePost = { post -> postViewModel.deletePost(post) }
+                        )
+                    }
                 }
             }
 
@@ -103,15 +116,22 @@ fun ProfileScreen(
 fun UserPostsList(
     posts: LazyPagingItems<PostEntity>,
     onEditPost: (Post) -> Unit,
+    searchQuery: String,
     onDeletePost: (Post) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val filteredPosts = remember(posts.itemSnapshotList.items, searchQuery) {
+        posts.itemSnapshotList.items.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.description.contains(searchQuery, ignoreCase = true)
+        }
+    }
     LazyColumn(modifier = modifier) {
         items(
-            count = posts.itemCount,
-            key = { index -> posts[index]?.id ?: index }
+            count = filteredPosts.size,
+            key = { index -> filteredPosts[index]?.id ?: index }
         ) { index ->
-            posts[index]?.let { post ->
+            filteredPosts[index]?.let { post ->
                 UserPostCard(
                     post = post,
                     onEditClick = onEditPost,
