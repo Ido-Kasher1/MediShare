@@ -22,6 +22,7 @@ import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.example.medishare.data.local.PostEntity
 import com.example.medishare.models.Post
+import com.example.medishare.ui.components.FilePreview
 import com.example.medishare.ui.viewmodels.AuthViewModel
 import com.example.medishare.ui.viewmodels.PostViewModel
 import com.example.medishare.ui.viewmodels.PostViewModelFactory
@@ -79,7 +80,7 @@ fun ProfileScreen(
                     UserPostsList(
                         posts = userPosts,
                         onEditPost = { post -> editingPost = post },
-                        onDeletePost = { postId -> postViewModel.deletePost(postId) }
+                        onDeletePost = { post -> postViewModel.deletePost(post) }
                     )
                 }
             }
@@ -102,7 +103,7 @@ fun ProfileScreen(
 fun UserPostsList(
     posts: LazyPagingItems<PostEntity>,
     onEditPost: (Post) -> Unit,
-    onDeletePost: (String) -> Unit,
+    onDeletePost: (Post) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier) {
@@ -125,7 +126,7 @@ fun UserPostsList(
 private fun UserPostCard(
     post: PostEntity,
     onEditClick: (Post) -> Unit,
-    onDeleteClick: (String) -> Unit,
+    onDeleteClick: (Post) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -169,7 +170,7 @@ private fun UserPostCard(
                         DropdownMenuItem(
                             text = { Text("Delete") },
                             onClick = {
-                                onDeleteClick(post.id)
+                                onDeleteClick(post.toPost())
                                 showMenu = false
                             },
                             leadingIcon = {
@@ -184,17 +185,10 @@ private fun UserPostCard(
                 text = post.description,
                 style = MaterialTheme.typography.bodyMedium
             )
-            post.imageUrl?.let { url ->
+            if (!post.imageUrl.isNullOrBlank())
+            {
                 Spacer(modifier = Modifier.height(8.dp))
-                AsyncImage(
-                    model = url,
-                    contentDescription = "Post attachment",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Inside
-                )
+                FilePreview(fileUrl = post.imageUrl, fileName = post.fileName ?: "")
             }
         }
     }

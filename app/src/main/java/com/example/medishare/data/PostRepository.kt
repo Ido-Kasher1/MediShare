@@ -67,7 +67,7 @@ class PostRepository(private val context: Context) {
         }
     }
 
-    suspend fun uploadImage(imageBytes: ByteArray): String {
+    suspend fun uploadFile(imageBytes: ByteArray): String {
         // Extract file extension from bytes using magic numbers or default to bin
         val fileExtension = when {
             imageBytes.size >= 2 && imageBytes[0] == 0xFF.toByte() && imageBytes[1] == 0xD8.toByte() -> "jpg"
@@ -165,28 +165,23 @@ class PostRepository(private val context: Context) {
         }
     }
 
-    suspend fun deletePost(postId: String) {
+    suspend fun deletePost(post: Post) {
         try {
+            Log.d(TAG, "Trying to delete $post from Firestore and local cache")
             // Get post before deletion to get the file URL
-            val post = firestore.collection("posts").document(postId).get().await()
-            val imageUrl = post.getString("imageUrl")
-            
-            // Delete from Firestore
-            firestore.collection("posts").document(postId).delete().await()
-            
-            // Delete file from storage if exists
-            imageUrl?.let { url ->
+            if (post.imageUrl.isNullOrBlank()) {
                 try {
-                    val fileRef = storage.getReferenceFromUrl(url)
-                    fileRef.delete().await()
+                    val ref = storage.getReferenceFromUrl(post.imageUrl)
+                    ref.delete().await()
                     Log.d(TAG, "Successfully deleted file from storage")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error deleting file from storage", e)
                 }
             }
-            
-            // Delete from local cache
-            postDao.deletePost(postId)
+
+            firestore.collection("posts").document(post.id).delete().await()
+
+            postDao.deletePost(post.id)
             Log.d(TAG, "Successfully deleted post from Firestore and local cache")
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting post", e)

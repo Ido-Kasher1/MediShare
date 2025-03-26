@@ -46,6 +46,7 @@ class PostViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             _refreshState.value = PostsState.Loading
             try {
+                Log.d(TAG, "Refreshing posts")
                 repository.refreshPosts()
                 _refreshState.value = PostsState.Success(emptyList()) // Empty list since we're using paging
             } catch (e: Exception) {
@@ -53,23 +54,55 @@ class PostViewModel(context: Context) : ViewModel() {
             }
         }
     }
+    private fun getFileNameFromUri(uri: Uri): String? {
+        val returnCursor = postContext.contentResolver.query(uri, null, null, null, null)
+        returnCursor?.use {
+            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            it.moveToFirst()
+            return it.getString(nameIndex)
+        }
+        return uri.lastPathSegment?.substringAfterLast('/')
+    }
 
-    fun createPost(title: String, description: String, imageUri: Uri?, location: GeoPoint? = null) {
+    fun createPost(title: String, description: String, fileUri: Uri?, location: GeoPoint? = null) {
         viewModelScope.launch {
             try {
-                val fileName = imageUri?.lastPathSegment?.substringAfterLast('/')
-                val imageUrl = imageUri?.let { uri ->
-                    val imageBytes = compressImage(uri)
-                    repository.uploadImage(imageBytes)
+                var imageUrl: String? = null
+                var fileName: String? = null
+
+                fileUri?.let { uri ->
+                    fileName = getFileNameFromUri(uri)
+                    val inputStream = postContext.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+
+                    if (bytes != null) {
+                        val isImage = fileName?.lowercase()?.endsWith(".jpg") == true ||
+                                fileName?.lowercase()?.endsWith(".jpeg") == true ||
+                                fileName?.lowercase()?.endsWith(".png") == true
+
+                        val finalBytes: ByteArray = (if (isImage) compressImage(uri) else bytes) as ByteArray
+
+                        imageUrl = repository.uploadFile(finalBytes)
+                    }
                 }
-                repository.createPost(title, description, imageUrl, fileName, location)
-                refreshPosts() // Refresh the posts after creating a new one
+
+                repository.createPost(
+                    title = title,
+                    description = description,
+                    imageUrl = imageUrl,
+                    fileName = fileName ?: "",
+                    location = location
+                )
+
+                refreshPosts()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating post", e)
-                throw e
+                _refreshState.value = PostsState.Error("Failed to create post")
             }
         }
     }
+
 
     private fun compressImage(uri: Uri): ByteArray {
         val inputStream = postContext.contentResolver.openInputStream(uri)
@@ -90,10 +123,11 @@ class PostViewModel(context: Context) : ViewModel() {
         }
     }
 
-    fun deletePost(postId: String) {
+    fun deletePost(post: Post) {
         viewModelScope.launch {
             try {
-                repository.deletePost(postId)
+                repository.deletePost(post)
+                Log.d(TAG, "Post deleted successfully: ${post.id}")
                 refreshPosts()
             } catch (e: Exception) {
                 _refreshState.value = PostsState.Error(e.message ?: "Failed to delete post")

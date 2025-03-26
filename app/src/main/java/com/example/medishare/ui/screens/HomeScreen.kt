@@ -1,28 +1,19 @@
 package com.example.medishare.ui.screens
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
+import com.example.medishare.ui.components.FilePreview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.LazyPagingItems
-import coil.compose.AsyncImage
 import com.example.medishare.data.local.PostEntity
-import com.example.medishare.models.Post
 import com.example.medishare.ui.viewmodels.PostViewModel
 import com.example.medishare.ui.viewmodels.PostViewModelFactory
 import com.example.medishare.ui.viewmodels.PostsState
@@ -90,59 +81,6 @@ fun HomeScreen(
         }
     }
 }
-
-@Composable
-fun FilePreview(fileUrl: String, fileName: String) {
-    val context = LocalContext.current
-
-    Log.d("FilePreview", "File URL: $fileName")
-    when {
-        fileName.endsWith(".jpg", true) || fileName.endsWith(".jpeg", true) || fileName.endsWith(".png", true) -> {
-            AsyncImage(
-                model = fileUrl,
-                contentDescription = "Image preview",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
-        }
-        fileName.endsWith(".pdf", true) -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Icon(Icons.Default.Description, contentDescription = "PDF file")
-                Text("PDF File", style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(Uri.parse(fileUrl), "application/pdf")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(intent)
-                }) {
-                    Text("Open")
-                }
-            }
-        }
-        else -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                Icon(Icons.Default.AttachFile, contentDescription = "File")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("File attached", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-
 @Composable
 fun PostList(
     posts: LazyPagingItems<PostEntity>,
