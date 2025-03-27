@@ -90,8 +90,7 @@ class PostViewModel(context: Context) : ViewModel() {
                     title = title,
                     description = description,
                     imageUrl = imageUrl,
-                    fileName = fileName ?: "",
-                    location = location
+                    fileName = fileName ?: ""
                 )
 
                 refreshPosts()

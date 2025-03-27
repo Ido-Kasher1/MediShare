@@ -3,6 +3,7 @@ package com.example.medishare.ui.components
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,7 +58,12 @@ fun FilePreview(fileUrl: String, fileName: String) {
                         setDataAndType(Uri.parse(fileUrl), "application/pdf")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
-                    context.startActivity(intent)
+
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(intent)
+                    } else {
+                        Toast.makeText(context, "אין אפליקציה שיכולה לפתוח קובץ PDF", Toast.LENGTH_SHORT).show()
+                    }
                 }) {
                     Text("Open")
                 }

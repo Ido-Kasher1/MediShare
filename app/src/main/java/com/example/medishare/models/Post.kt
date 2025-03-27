@@ -29,9 +29,5 @@ data class Post(
     @ServerTimestamp
     @PropertyName("timestamp")
     val timestamp: Date = Date(),
-    
-    @get:Exclude
-    @set:Exclude
-    @PropertyName("location")
-    var location: GeoPoint? = null
+
 )

@@ -96,7 +96,6 @@ class PostRepository(private val context: Context) {
         description: String, 
         imageUrl: String?, 
         fileName: String? = null,
-        location: GeoPoint? = null
     ): Post {
         Log.d(TAG, "Starting post creation in Firestore")
         val currentUser = auth.currentUser ?: throw IllegalStateException("User not logged in")
@@ -115,8 +114,7 @@ class PostRepository(private val context: Context) {
             "description" to description,
             "imageUrl" to (imageUrl ?: ""),
             "fileName" to actualFileName,
-            "timestamp" to com.google.firebase.Timestamp.now(),
-            "location" to location
+            "timestamp" to com.google.firebase.Timestamp.now()
         )
 
         return try {

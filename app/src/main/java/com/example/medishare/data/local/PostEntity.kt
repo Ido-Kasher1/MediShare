@@ -14,9 +14,7 @@ data class PostEntity(
     val description: String,
     val imageUrl: String,
     val fileName: String? = null,
-    val timestamp: Date,
-    val latitude: Double?,
-    val longitude: Double?
+    val timestamp: Date
 ) {
     fun toPost(): Post = Post(
         id = id,
@@ -36,9 +34,7 @@ data class PostEntity(
             description = post.description,
             imageUrl = post.imageUrl,
             fileName = post.fileName,
-            timestamp = post.timestamp,
-            latitude = null,  // TODO: Add location support
-            longitude = null
+            timestamp = post.timestamp
         )
     }
 }
