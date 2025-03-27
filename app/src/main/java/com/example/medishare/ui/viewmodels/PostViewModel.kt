@@ -105,10 +105,15 @@ class PostViewModel(context: Context) : ViewModel() {
 
 
 
-    fun updatePost(post: Post) {
+    fun updatePost(post: Post, newImageUri: Uri? = null) {
         viewModelScope.launch {
             try {
-                repository.updatePost(post)
+                val updatedImageUrl = newImageUri?.let {
+                    val imageBytes = compressImage(postContext, it)
+                    repository.uploadFile((imageBytes))
+                } ?: post.imageUrl
+                val updatedPost = post.copy(imageUrl = updatedImageUrl)
+                repository.updatePost(updatedPost)
                 refreshPosts()
             } catch (e: Exception) {
                 _refreshState.value = PostsState.Error(e.message ?: "Failed to update post")

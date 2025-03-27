@@ -24,6 +24,7 @@ import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.example.medishare.data.local.PostEntity
 import com.example.medishare.models.Post
+import com.example.medishare.ui.components.EditPostDialog
 import com.example.medishare.ui.components.EditProfileDialog
 import com.example.medishare.ui.components.FilePreview
 import com.example.medishare.ui.viewmodels.AuthViewModel
@@ -147,8 +148,8 @@ fun ProfileScreen(
                 EditPostDialog(
                     post = post,
                     onDismiss = { editingPost = null },
-                    onConfirm = { updatedPost ->
-                        postViewModel.updatePost(updatedPost)
+                    onConfirm = { updatedPost, newImageUri ->
+                        postViewModel.updatePost(updatedPost, newImageUri)
                         editingPost = null
                     }
                 )
@@ -273,51 +274,3 @@ private fun UserPostCard(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditPostDialog(
-    post: Post,
-    onDismiss: () -> Unit,
-    onConfirm: (Post) -> Unit
-) {
-    var title by remember { mutableStateOf(post.title) }
-    var description by remember { mutableStateOf(post.description) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Post") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(post.copy(title = title, description = description))
-                    onDismiss()
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
