@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -75,7 +77,8 @@ fun HomeScreen(
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp),
+                        style = TextStyle(textDirection =  TextDirection.Content)
                     )
                 }
                 else -> {
@@ -147,7 +150,9 @@ fun PostCard(post: PostEntity) {
         ) {
             Text(
                 text = post.title,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge.copy(
+                    textDirection = TextDirection.Content
+                ),
             )
 
             if (!post.imageUrl.isNullOrBlank()) {

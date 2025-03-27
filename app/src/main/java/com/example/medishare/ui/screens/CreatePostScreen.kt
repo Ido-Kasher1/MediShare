@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -126,7 +127,9 @@ fun CreatePostScreen(
                     selectedFileName?.let { fileName ->
                         Text(
                             text = "Selected file: $fileName",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = TextDirection.Content
+                            ),
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
@@ -137,7 +140,9 @@ fun CreatePostScreen(
                 Text(
                     text = (refreshState as PostsState.Error).message,
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        textDirection = TextDirection.Content
+                    )
                 )
             }
 
