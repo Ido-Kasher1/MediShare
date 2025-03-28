@@ -41,7 +41,7 @@ import com.google.firebase.auth.FirebaseAuth
 fun ProfileScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
     val postViewModel: PostViewModel = viewModel(factory = PostViewModelFactory(context))

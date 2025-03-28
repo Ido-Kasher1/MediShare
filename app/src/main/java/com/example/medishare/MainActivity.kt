@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
 import com.example.medishare.ui.theme.MediShareTheme
+import com.example.medishare.ui.viewmodels.AuthViewModel
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         FirebaseApp.initializeApp(this)?.let {
@@ -32,12 +36,18 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
         setContent {
+            val navController = rememberNavController()
+            val authViewModel: AuthViewModel = viewModel()
+
             MediShareTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NavGraph()
+                    NavGraph(
+                        navController = navController,
+                        authViewModel = authViewModel
+                    )
                 }
             }
         }

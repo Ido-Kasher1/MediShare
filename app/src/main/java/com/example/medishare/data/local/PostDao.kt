@@ -20,8 +20,4 @@ interface PostDao {
     @Query("DELETE FROM posts WHERE id = :postId")
     suspend fun deletePost(postId: String)
 
-//    @Transaction
-//    suspend fun refreshPosts(posts: List<PostEntity>) {
-//        insertPosts(posts)
-//    }
 }

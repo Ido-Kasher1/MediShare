@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +26,7 @@ import com.example.medishare.utils.compressImage
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel
 ) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
@@ -39,6 +40,7 @@ fun LoginScreen(
     // מעבר למסך הבא אם המשתמש מחובר
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
+            Log.d("LoginScreen", "User is authenticated")
             onLoginSuccess()
         }
     }
