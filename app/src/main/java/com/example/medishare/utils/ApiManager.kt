@@ -21,7 +21,7 @@ suspend fun fetchWikiSummary(term: String): String {
 
         if (connection.responseCode == 200) {
             val response = connection.inputStream.bufferedReader().use { it.readText() }
-            Log.d("WikiAPI", "[$lang] Response for $term: $response")
+            Log.d(TAG, "[$lang] Response for $term: $response")
 
             val json = JSONObject(response)
             val extract = json.optString("extract", "")
