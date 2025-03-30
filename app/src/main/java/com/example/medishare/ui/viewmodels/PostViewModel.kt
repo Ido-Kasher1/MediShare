@@ -48,7 +48,7 @@ class PostViewModel(context: Context) : ViewModel() {
             try {
                 Log.d(TAG, "Refreshing posts")
                 repository.refreshPosts()
-                _refreshState.value = PostsState.Success(emptyList()) // Empty list since we're using paging
+                _refreshState.value = PostsState.Success(emptyList())
             } catch (e: Exception) {
                 _refreshState.value = PostsState.Error(e.message ?: "Failed to refresh posts")
             }

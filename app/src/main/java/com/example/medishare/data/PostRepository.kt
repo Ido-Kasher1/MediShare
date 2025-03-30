@@ -68,7 +68,6 @@ class PostRepository(private val context: Context) {
     }
 
     suspend fun uploadFile(imageBytes: ByteArray): String {
-        // Extract file extension from bytes using magic numbers or default to bin
         val fileExtension = when {
             imageBytes.size >= 2 && imageBytes[0] == 0xFF.toByte() && imageBytes[1] == 0xD8.toByte() -> "jpg"
             imageBytes.size >= 4 && imageBytes[0] == 0x89.toByte() && imageBytes[1] == 0x50.toByte() -> "png"
@@ -101,7 +100,6 @@ class PostRepository(private val context: Context) {
         val currentUser = auth.currentUser ?: throw IllegalStateException("User not logged in")
         val postId = UUID.randomUUID().toString()
         
-        // Get the actual file name from the URL if it exists
         val actualFileName = if (imageUrl != null) {
             imageUrl.substringAfterLast("/").substringBefore("?")
         } else {
@@ -153,7 +151,6 @@ class PostRepository(private val context: Context) {
                 .update(postData as Map<String, Any>)
                 .await()
             
-            // Update local cache
             postDao.insertPosts(listOf(PostEntity.fromPost(post)))
             
             Log.d(TAG, "Successfully updated post in Firestore and local cache")
@@ -166,7 +163,6 @@ class PostRepository(private val context: Context) {
     suspend fun deletePost(post: Post) {
         try {
             Log.d(TAG, "Trying to delete $post from Firestore and local cache")
-            // Get post before deletion to get the file URL
             if (post.imageUrl.isNullOrBlank()) {
                 try {
                     val ref = storage.getReferenceFromUrl(post.imageUrl)

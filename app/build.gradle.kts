@@ -18,7 +18,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Room schema location
         kapt {
             arguments {
                 arg("room.schemaLocation", "$projectDir/schemas")
@@ -52,7 +51,6 @@ android {
 }
 
 dependencies {
-    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
@@ -65,17 +63,13 @@ dependencies {
     kapt("androidx.room:room-compiler:$roomVersion")
     implementation("androidx.room:room-paging:$roomVersion")
 
-    // Paging
     val pagingVersion = "3.2.1"
     implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
     implementation("androidx.paging:paging-compose:$pagingVersion")
     implementation("androidx.paging:paging-runtime:$pagingVersion")
 
-
-    // SwipeRefresh
     implementation("com.google.accompanist:accompanist-swiperefresh:0.27.0")
 
-    // AndroidX Core
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -91,16 +85,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
-    // Image Loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Location Services
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
-    // Picasso for image loading and caching
     implementation("com.squareup.picasso:picasso:2.8")
 
-    // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

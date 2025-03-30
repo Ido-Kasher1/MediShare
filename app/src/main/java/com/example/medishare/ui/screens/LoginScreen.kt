@@ -37,7 +37,6 @@ fun LoginScreen(
 
     val authState by viewModel.authState.collectAsState()
 
-    // מעבר למסך הבא אם המשתמש מחובר
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
             Log.d("LoginScreen", "User is authenticated")
@@ -45,7 +44,6 @@ fun LoginScreen(
         }
     }
 
-    // Launcher לבחירת תמונה
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
